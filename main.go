@@ -62,6 +62,7 @@ func main() {
 	locs := LoadOrParseLocs()
 	locsToJsonTree(locs)
 
-	cats := GetCategoriesTree()
-	catsToJson(cats)
+	cats := GetCategoriesTree2()
+	fmt.Println(cats)
+	//catsToJson(cats)
 }
