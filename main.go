@@ -3,11 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
 	"io/ioutil"
 	"log"
-	"net/http"
-	"time"
 )
 
 type locTree struct {
@@ -52,36 +49,19 @@ wp:
 	_ = ioutil.WriteFile("locationsTree.json", data, 644)
 }
 
+func catsToJson(cats []CategoryGroup) {
+	data, err := json.MarshalIndent(cats, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	_ = ioutil.WriteFile("categories.json", data, 644)
+}
 
 func main() {
 	locs := LoadOrParseLocs()
-
 	locsToJsonTree(locs)
 
-
-	time.Sleep(1 * time.Second)
-
-	url := "https://www.avito.ru/rossiya"
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", resp.StatusCode, resp.Status)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	doc.Find(".js-search-form-category").Find("*").Each(func(i int, s *goquery.Selection) {
-		band := s.Find("a").Text()
-		title := s.Find("i").Text()
-		text := s.Text()
-		fmt.Printf("Review %d: %s - %s %s\n", i, band, title, text)
-	})
-
+	cats := GetCategoriesTree()
+	catsToJson(cats)
 }

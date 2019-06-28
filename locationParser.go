@@ -80,7 +80,7 @@ func GetLocations() []Location {
 
 		resp, err := client.Get(fmt.Sprintf(reqF, string(query))) // INFO: выдает максимум 1000 локаций без возможности указания смещения или страниц
 		if err != nil {
-			log.Println("Couldn't get response:", err)
+			log.Println("couldn't get response:", err)
 			errOccurred++
 			if errOccurred > MAX_ERRORS {
 				os.Exit(1)
@@ -97,7 +97,7 @@ func GetLocations() []Location {
 
 		err = json.Unmarshal(raw, &locs)
 		if err != nil {
-			log.Println("Couldn't unmarshal response:", err)
+			log.Println("couldn't unmarshal response:", err)
 			errOccurred++
 			if errOccurred > MAX_ERRORS {
 				os.Exit(1)
@@ -133,11 +133,11 @@ func LoadOrParseLocs() []Location {
 	var ret []Location
 	data, err := ioutil.ReadFile("locations_save")
 	if err != nil {
-		fmt.Println("Couldn't read/find saved locations, parsing from site:", err)
+		fmt.Println("couldn't read/find saved locations, parsing from site:", err)
 		ret = GetLocations()
 		dataToSave, err := json.Marshal(ret)
 		if err != nil {
-			fmt.Println("Couldn't marshal parsed locations:", err)
+			fmt.Println("couldn't marshal parsed locations:", err)
 			return ret
 		}
 		_ = ioutil.WriteFile("locations_save", dataToSave, 644)
@@ -145,7 +145,7 @@ func LoadOrParseLocs() []Location {
 	}
 	err = json.Unmarshal(data, &ret)
 	if err != nil {
-		log.Print("Couldn't unmarshal loaded locations:", err)
+		log.Print("couldn't unmarshal loaded locations:", err)
 	}
 	return ret
 }
