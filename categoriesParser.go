@@ -1,19 +1,52 @@
 package main
 
 import (
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"log"
 	"net/http"
 	"strings"
 )
 
-type CategoryGroup struct {
-	Name       string   `json:"name"`
-	Categories []string `json:"categories"`
+type CategoryTree struct {
+	Name          string
+	Url           string
+	SubCategories []CategoryTree
 }
 
-func GetCategoriesTree() []CategoryGroup {
-	url := "https://www.avito.ru/rossiya"
+func buildSubTree(tree *CategoryTree) func(i int, s *goquery.Selection) {
+	return func(i int, s *goquery.Selection) {
+		homeUrl := "https://www.avito.ru"
+
+		if s.Is("li") {
+			var subTree CategoryTree
+
+			aElem := s.Find("a")
+			name, exist := aElem.Attr("title")
+			if !exist {
+				log.Println("couldn't find item name")
+				return
+			}
+			subTree.Name = name
+
+			url, exist := aElem.Attr("href")
+			if !exist {
+				log.Println("couldn't find item url")
+				return
+			}
+			subTree.Url = homeUrl + url
+
+			s.ChildrenFiltered("ul").Each(buildSubTree(&subTree))
+			tree.SubCategories = append(tree.SubCategories, subTree)
+		}
+
+		if s.Is("ul") {
+			s.ChildrenFiltered("li").Each(buildSubTree(tree))
+		}
+	}
+}
+
+func getSubCategories(url string) []CategoryTree {
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatal(err)
@@ -29,35 +62,16 @@ func GetCategoriesTree() []CategoryGroup {
 		log.Fatal(err)
 	}
 
-	ret := []CategoryGroup{{"All", []string{}}}
+	var temp CategoryTree
 
-	doc.Find(".js-search-form-category").Find("*").Each(func(i int, s *goquery.Selection) {
-		isGroup := s.HasClass("opt-group")
-		name := s.Text()
+	doc.Find("*[class^='rubricator-list']").Each(buildSubTree(&temp))
 
-		if isGroup {
-			ret = append(ret, CategoryGroup{Name: name, Categories: []string{}})
-			return
-		}
-
-		last := len(ret) - 1
-		ret[last].Categories = append(ret[last].Categories, name)
-	})
-
-	return ret
+	return temp.SubCategories
 }
 
-type CategoryTree struct {
-	Name          string
-	Url           string
-	SubCategories []CategoryTree
-}
+func GetCategoriesTree() CategoryTree {
+	fmt.Println("Getting the main categories")
 
-func GetSubCategories(url string) []CategoryTree {
-	return nil
-}
-
-func GetCategoriesTree2() CategoryTree {
 	url := "https://www.avito.ru/rossiya"
 	resp, err := http.Get(url)
 	if err != nil {
@@ -82,15 +96,15 @@ func GetCategoriesTree2() CategoryTree {
 
 		name := selection.Text()
 		name = strings.Join(strings.Fields(name), "") // removing all whitespaces
-		
+
 		url, exist := selection.Attr("href")
 		if !exist {
 			log.Println("category url not found, skip...")
 			return
 		}
 
-		tCat := CategoryTree{Name: name, Url: homeUrl + url, SubCategories: GetSubCategories(homeUrl + url)}
-		ret.SubCategories = append(ret.SubCategories, tCat)
+		fmt.Println("Getting subcategories for", name)
+		ret.SubCategories = append(ret.SubCategories, getSubCategories(homeUrl+url)...)
 	})
 
 	return ret

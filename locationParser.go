@@ -131,6 +131,8 @@ func GetLocations() []Location {
 
 func LoadOrParseLocs() []Location {
 	var ret []Location
+	fmt.Println("Looking for locations_save file")
+
 	data, err := ioutil.ReadFile("locations_save")
 	if err != nil {
 		fmt.Println("couldn't read/find saved locations, parsing from site:", err)
@@ -143,9 +145,12 @@ func LoadOrParseLocs() []Location {
 		_ = ioutil.WriteFile("locations_save", dataToSave, 644)
 		return ret
 	}
+
+	fmt.Println("Loading locations from locations_save file")
 	err = json.Unmarshal(data, &ret)
 	if err != nil {
 		log.Print("couldn't unmarshal loaded locations:", err)
 	}
+
 	return ret
 }

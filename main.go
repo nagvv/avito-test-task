@@ -49,7 +49,7 @@ wp:
 	_ = ioutil.WriteFile("locationsTree.json", data, 644)
 }
 
-func catsToJson(cats []CategoryGroup) {
+func catsToJson(cats CategoryTree) {
 	data, err := json.MarshalIndent(cats, "", "\t")
 	if err != nil {
 		log.Fatal(err)
@@ -62,7 +62,6 @@ func main() {
 	locs := LoadOrParseLocs()
 	locsToJsonTree(locs)
 
-	cats := GetCategoriesTree2()
-	fmt.Println(cats)
-	//catsToJson(cats)
+	cats := GetCategoriesTree()
+	catsToJson(cats)
 }
