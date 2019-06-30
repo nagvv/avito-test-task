@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strconv"
 )
 
 type locTree struct {
@@ -58,10 +59,53 @@ func catsToJson(cats CategoryTree) {
 	_ = ioutil.WriteFile("categories.json", data, 644)
 }
 
-func main() {
-	locs := LoadOrParseLocs()
-	locsToJsonTree(locs)
+func moscowCats() {
+	cats := GetCategoriesTree("moskva", true)
 
-	cats := GetCategoriesTree()
-	catsToJson(cats)
+	data, err := json.MarshalIndent(cats, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_ = ioutil.WriteFile("categoriesMoscow.json", data, 644)
+}
+
+func cli() {
+	text := "Введите номер команды: " +
+		"\n\t1) Получить список локаций" +
+		"\n\t2) Получить дерево категорий" +
+		"\n\t3) Получить дерево категорий Москвы" +
+		"\n\t4) Получить дерево категорий другого города(not implemented)" +
+		"\n\t0) Выход\n"
+
+	for {
+		fmt.Print(text)
+		var in string
+		_, err := fmt.Scanln(&in)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		n, err := strconv.Atoi(in)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		switch n {
+		case 1:
+			locs := LoadOrParseLocs()
+			locsToJsonTree(locs)
+		case 2:
+			cats := GetCategoriesTree("rossiya", false)
+			catsToJson(cats)
+		case 3:
+			moscowCats()
+		case 0:
+			return
+		}
+	}
+}
+
+func main() {
+	cli()
 }
