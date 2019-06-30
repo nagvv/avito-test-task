@@ -102,6 +102,8 @@ func cli() {
 			moscowCats()
 		case 0:
 			return
+		default:
+			fmt.Println("Недопустимый номер")
 		}
 	}
 }
