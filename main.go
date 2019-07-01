@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strconv"
 )
 
@@ -38,13 +37,13 @@ wp:
 				continue wp
 			}
 		}
-		fmt.Println("parent not found", v.Names["1"], v.Parent.Names["1"])
-		///log.Fatal("parent not found", v.Id, v.Parent.Id)
+		fmt.Println("Parent not found", v.Names["1"], v.Parent.Names["1"])
 	}
 
 	data, err := json.MarshalIndent(tree, "", "\t")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Couldn't marshal locations tree:", err)
+		return
 	}
 
 	_ = ioutil.WriteFile("locationsTree.json", data, 644)
@@ -53,18 +52,24 @@ wp:
 func catsToJson(cats CategoryTree) {
 	data, err := json.MarshalIndent(cats, "", "\t")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Couldn't marshal categories tree:", err)
+		return
 	}
 
 	_ = ioutil.WriteFile("categories.json", data, 644)
 }
 
 func moscowCats() {
-	cats := GetCategoriesTree("moskva", true)
+	cats, err := GetCategoriesTree("moskva", true)
+	if err != nil {
+		fmt.Println("Couldn't get categories tree:", err)
+		return
+	}
 
 	data, err := json.MarshalIndent(cats, "", "\t")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Couldn't marshal categories tree:", err)
+		return
 	}
 
 	_ = ioutil.WriteFile("categoriesMoscow.json", data, 644)
@@ -83,12 +88,12 @@ func cli() {
 		var in string
 		_, err := fmt.Scanln(&in)
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 			continue
 		}
 		n, err := strconv.Atoi(in)
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 			continue
 		}
 		switch n {
@@ -96,7 +101,11 @@ func cli() {
 			locs := LoadOrParseLocs()
 			locsToJsonTree(locs)
 		case 2:
-			cats := GetCategoriesTree("rossiya", false)
+			cats, err := GetCategoriesTree("rossiya", false)
+			if err != nil {
+				fmt.Println("Не удалось получить дерево категорий")
+				continue
+			}
 			catsToJson(cats)
 		case 3:
 			moscowCats()

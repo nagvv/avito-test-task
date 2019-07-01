@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -16,7 +15,8 @@ var gClient http.Client
 func getCustom(url string) (resp *http.Response, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Println("couldn't create new request:", err)
+		fmt.Println("Couldn't create new request:", err)
+		return nil, err
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0")
@@ -35,27 +35,31 @@ func getCountFromUrl(url string) int {
 	fmt.Println("Getting the number of announcements from:", url)
 
 	du := time.Duration(rand.Intn(11))
-	time.Sleep((du*100 + 1000) * time.Millisecond) //rand sleep from 1 to 2 second with step 0.1 second
+	time.Sleep((du*100 + 1000) * time.Millisecond) // rand sleep from 1 to 2 second with step 0.1 second
 	resp, err := getCustom(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Couldn't GET from \""+url+"\":", err)
+		return 0
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", resp.StatusCode, resp.Status)
+		fmt.Printf("status code error: %d %s\n", resp.StatusCode, resp.Status)
+		return 0
 	}
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Couldn't create goquery document:", err)
+		return 0
 	}
 
 	countStr := doc.Find(".page-title-count").Text()
 	countStr = strings.Join(strings.Fields(countStr), "")
 	count, err := strconv.Atoi(countStr)
 	if err != nil {
-		log.Println("Couldn't convert '"+countStr+"':", err)
+		fmt.Println("Couldn't convert '"+countStr+"':", err)
+		return 0
 	}
 
 	return count
@@ -71,14 +75,14 @@ func buildSubTree(tree *CategoryTree, doCount bool) func(i int, s *goquery.Selec
 			aElem := s.Find("a")
 			name, exist := aElem.Attr("title")
 			if !exist {
-				log.Println("couldn't find item name")
+				fmt.Println("Couldn't find item name")
 				return
 			}
 			subTree.Name = name
 
 			url, exist := aElem.Attr("href")
 			if !exist {
-				log.Println("couldn't find item url")
+				fmt.Println("Couldn't find item url")
 				return
 			}
 			subTree.Url = homeUrl + url
@@ -97,31 +101,34 @@ func buildSubTree(tree *CategoryTree, doCount bool) func(i int, s *goquery.Selec
 	}
 }
 
-func getSubCategories(url string, doCount bool) []CategoryTree {
+func getSubCategories(url string, doCount bool) ([]CategoryTree, error) {
 	time.Sleep(100 * time.Millisecond)
 	resp, err := getCustom(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Couldn't GET from \""+url+"\":", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", resp.StatusCode, resp.Status)
+		fmt.Printf("Status code error: %d %s\n", resp.StatusCode, resp.Status)
+		return nil, err
 	}
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Couldn't create goquery document:", err)
+		return nil, err
 	}
 
 	var temp CategoryTree
 
 	doc.Find("*[class^='rubricator-list']").Each(buildSubTree(&temp, doCount))
 
-	return temp.SubCategories
+	return temp.SubCategories, nil
 }
 
-func GetCategoriesTree(region string, doCount bool) CategoryTree {
+func GetCategoriesTree(region string, doCount bool) (CategoryTree, error) {
 	fmt.Println("Getting the main categories")
 
 	url := "https://www.avito.ru/" + region
@@ -129,17 +136,20 @@ func GetCategoriesTree(region string, doCount bool) CategoryTree {
 	time.Sleep(100 * time.Millisecond)
 	resp, err := getCustom(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Couldn't GET from \""+url+"\":", err)
+		return CategoryTree{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", resp.StatusCode, resp.Status)
+		fmt.Printf("Status code error: %d %s\n", resp.StatusCode, resp.Status)
+		return CategoryTree{}, err
 	}
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Couldn't create goquery document:", err)
+		return CategoryTree{}, err
 	}
 
 	homeUrl := "https://www.avito.ru"
@@ -150,7 +160,7 @@ func GetCategoriesTree(region string, doCount bool) CategoryTree {
 		countStr = strings.Join(strings.Fields(countStr), "")
 		count, err := strconv.Atoi(countStr)
 		if err != nil {
-			log.Println("Couldn't convert '"+countStr+"':", err)
+			fmt.Println("Couldn't convert '"+countStr+"':", err)
 		}
 		ret.Count = count
 	}
@@ -163,13 +173,18 @@ func GetCategoriesTree(region string, doCount bool) CategoryTree {
 
 		url, exist := selection.Attr("href")
 		if !exist {
-			log.Println("category url not found, skip...")
+			fmt.Println("Category url not found, skip...")
 			return
 		}
 
 		fmt.Println("Getting subcategories for", name)
-		ret.SubCategories = append(ret.SubCategories, getSubCategories(homeUrl+url, doCount)...)
+		subCats, err := getSubCategories(homeUrl+url, doCount)
+		if err != nil {
+			fmt.Println("Couldn't get subcategories for", name)
+			return
+		}
+		ret.SubCategories = append(ret.SubCategories, subCats...)
 	})
 
-	return ret
+	return ret, nil
 }
