@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"os"
 	"strconv"
 )
 
@@ -118,5 +120,27 @@ func cli() {
 }
 
 func main() {
-	cli()
+	if len(os.Args) > 1 {
+		if os.Args[1] == "cli" {
+			cli()
+			return
+		}
+	}
+
+	go func() {
+		locs := LoadOrParseLocs()
+		locsToJsonTree(locs)
+		fmt.Println("Parsing locations finished")
+
+		cats, err := GetCategoriesTree("rossiya", false)
+		if err != nil {
+			log.Fatal("Не удалось получить дерево категорий:", err)
+		}
+		catsToJson(cats)
+		fmt.Println("Parsing categories finished")
+
+		moscowCats()
+		fmt.Println("Parsing Moscow categories finished")
+	}()
+	startService()
 }
